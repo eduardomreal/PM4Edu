@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="background-color: #DCDCDC; width: auto; border-radius: 6px;">    
+    <div> <!--style="display: grid; grid-template-columns: auto auto; padding-top: 8px;">-->
+        <div style="background-color: #E6E6E6;  padding-bottom: 10px; border-radius: 6px;">
+            <h2 style="text-align: center; padding-top: 15px;"><b>Exploratory Data Analysis</b></h2>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">            
+            <div>
+                <h3 style="text-align: center;"><b>Event log:</b> <mark><i>{{dataset}}</i></mark></h3>
+                <!--<h4 style="text-align: center;">Attributes: {{att | safe}}</h4>
+                <h4 style="text-align: center;">Events: {{ev | safe}}</h4>-->
+            </div>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+                                    
+            <div style="padding-left: 10px; padding-right: 10px;">
+                <h4 style="text-align: center;"><b>Overview event log (<mark><i>{{att | safe}} attributes and {{ev | safe}} events</i></mark>):</b></h4>
+                <h5 style="background-color:#64C4FE;">{{description | safe}}</h5>
+            </div>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">                     
+            <div style="padding-left: 10px; padding-right: 10px;">            
+                <form class="form-att-plot" method="POST" action='/datasets/{{dataset}}'>
+                    <div style="text-align: center;">
+                        <h4><b>A summarised report (statistics and histograms)?</b></h4>                     
+                        <input type="radio" id="radio_sweet" name="radio_report" value="radio_sweet">
+                        <label for="radio_sweet">SweetViz</label><br>
+                        <input type="radio" id="radio_profiling" name="radio_report" value="radio_profiling" checked>
+                        <label for="radio_profiling">Pandas Profiling</label>
+                    </div>
+                    <div align="center">
+                        <button class="btn btn-lg btn-primary btn-block" type="submit" style="width: 150px; height: 50px; margin-top: 20px;">Report</button>
+                    </div>
+                    <br>                    
+                    <div align="center">
+                        <iframe src="{{url_for('static', filename='df_report.html')}}" style="height:450px;width:100%;" align="middle" title="Report log"></iframe>                    
+                    </div>
+                </form>
+                <br>
+                
+                <div style="display: flex;">
+                    <h4><i><b>Click to open the report in a new browser tab:&nbsp</b></i></h4>    
+                    <button class="btn btn-success" onclick="myFunction()">Open a new tab</button>
+                    <script>
+                        function myFunction() {
+                        window.open("{{url_for('static', filename='df_report.html')}}");
+                        }
+                    </script>
+                </div>
+            </div>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">    
+            
+            <div>
+                <h4 style="text-align: center;"><b>Click to view the event log:</b></h4>
+                <div style="display: flex; justify-content: center; align-items: center;">
+                    <button onclick="func_first_last()" class="btn btn-lg btn-primary btn-block" style="width: 200px; height: 50px;">First&Last event log</button>
+                </div>
+                <div id='first_last' style="display: none;">
+                <h3>First event log elements:</h3>
+                <h5>{{head | safe}}</h5>
+                <h3>Last event log elements:)</h3>
+                <h5>{{tail | safe}}</h5>
+                </div>
+                
+                <!--<h4><b>Click to view the full event log</b></h4>-->
+                <div style="display: flex; justify-content: center; align-items: center; padding-top: 10px;">
+                    <button onclick="func_full_log()" class="btn btn-lg btn-primary btn-block" style="width: 200px; height: 50px;">All event log</button>
+                </div>
+                <div id='full_log' style="display: none;">
+                <h3>Event log:</h3>
+                <h5>{{df | safe}}</h5>        
+                </div>
+            </div>    
+            <br>            
+            <script>
+                function func_first_last() {
+                var x = document.getElementById("first_last");
+                if(x.style.display === "none") {
+                    x.style.display = "block";
+                } else {
+                    x.style.display = "none";
+                }
+                }
+            </script>
+            <script>
+                function func_full_log() {
+                var x = document.getElementById("full_log");
+                if(x.style.display === "none") {
+                    x.style.display = "block";
+                } else {
+                    x.style.display = "none";
+                }
+                }
+            </script>
+
+            <hr style="height: 15px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            <div class="card-pm" align="center">
+            </br>
+                <div class="card" style="width: 24rem; background-color: #E6E6E6;" align="center">
+                <img src="{{url_for('static', filename='images/prep3.png')}}" align="center" width=200 height=200 class="card-img-top">
+                <div class="card-body">
+                    <form class="form-features" method="POST" action='/preprocessing/{{dataset}}'> 
+                        <div style="padding-bottom: 5px; display: flex; justify-content: center; align-items: center;">                
+                            <button class="btn btn-lg btn-primary btn-block" type="submit" style="width: 200px; height: 50px;">Preprocessing</button>
+                        </div>
+                    </form>
+                    <h4>Cleaning&Selection, Segmentation and Sort Events</h4>
+                </div>
+            </div>
+            
+            <hr style="height: 15px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            <div class="card-pm" align="center">
+            </br>
+                <div class="card" style="width: 24rem; background-color: #E6E6E6;" align="center">
+                <img src="{{url_for('static', filename='images/lupa.svg')}}" align="center" width=200 height=200 class="card-img-top">
+                <div class="card-body">
+                    <form class="form-features" method="POST" action='/pm/{{dataset}}'> 
+                        <div style="padding-bottom: 5px; display: flex; justify-content: center; align-items: center;">                
+                            <button class="btn btn-lg btn-primary btn-block" type="submit" style="width: 200px; height: 50px;">Process Discovery</button>
+                        </div>
+                    </form>
+                    <h4>Graph Process Model, Activities and Traces</h4>
+                </div>
+            </div>
+            <hr style="height: 15px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            <!--<div>
+                <form action="/viewds">
+                    <input class="btn btn-lg btn-primary btn-block" type="submit" style="width: 200px; height: 50px;" value="Go to event log list" />
+                </form>
+            </div>-->
+        </div>
+    </div>    
+</div>
+
+{% endblock %}

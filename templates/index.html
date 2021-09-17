@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ super() }} - Home{% endblock %}
+
+{% block content %}
+  
+  <!--pode colocar o jumbotrom aq-->
+  
+  <div class="row marketing">
+    <div class="col-lg-4">
+      <div class="card-explorer" align="center">
+        </br>
+        <div class="card" style="width: 24rem; background-color: #E8E8E8;" align="center">
+          <img src="{{url_for('static', filename='images/tutorial5.png')}}" align="center" width=115 height=115 class="card-img-top">
+          <div class="card-body">
+            <!--<h5 class="card-title" style="font-size: medium; color:#00B2FF;"><b>Access</b></h5>-->
+            <!--<p class="card-text">Datasets Access</p>-->
+            <a href="{{ url_for('tutorial') }}" class="btn btn-primary">Tutorial</a>
+          </div>
+        </div>
+        </br></br>
+      </div>
+    </div>    
+
+    <div class="col-lg-4">
+      <div class="card-explorer" align="center">
+        </br>
+        <div class="card" style="width: 24rem; background-color: #E8E8E8;" align="center">
+          <img src="{{url_for('static', filename='images/mp_ds.png')}}" align="center" width=115 height=115 class="card-img-top">
+          <div class="card-body">
+            <!--<h5 class="card-title" style="font-size: medium; color:#00B2FF;"><b>Access</b></h5>-->
+            <!--<p class="card-text">Datasets Access</p>-->
+            <a href="{{ url_for('viewds') }}" class="btn btn-primary">Event Log and Process Discovery</a>
+          </div>
+        </div>
+        </br></br>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card-explorer" align="center">
+        </br>
+        <div class="card" style="width: 24rem; background-color: #E8E8E8;" align="center">
+          <img src="{{url_for('static', filename='images/publications2.png')}}" align="center" width=115 height=115 class="card-img-top">
+          <div class="card-body">
+            <!--<h5 class="card-title" style="font-size: medium; color:#00B2FF;"><b>Access</b></h5>-->
+            <!--<p class="card-text">Datasets Access</p>-->
+            <a href="{{ url_for('publications') }}" class="btn btn-primary">Publications</a>
+          </div>
+        </div>
+        </br></br>
+      </div>
+    </div>
+
+  </div>
+  
+  {% endblock %}

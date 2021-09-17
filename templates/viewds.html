@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+</br>
+<div style="display: flex; justify-content: center;">
+</div>
+</br>
+<div>
+    <h4 style="text-align: center;"><b>After you to select a log, on next page you will get the Exploratory Data Analysis - EDA.</b></h4>
+    <h5 style="text-align: center;"><i>It can take a few seconds, due to report generate (statistics and histograms).</i></h5>
+</div>
+</br>
+<h2 align='center'>Choose an event log!</h2>
+<!-- <h2 align='center'>Original datasets</h2> -->
+
+{% for ds in originalds %}    
+    <h3 align='center'><a href='datasets/{{ds}}'>{{ds}}</a></h3>
+{% endfor %}
+
+<!--<h2 align='center'>Datasets after preprocessing:</h2>-->
+<div>
+    <table align="center" style="border: 2px solid black; width: 30%;">
+    <tr style="border: 2px solid black; text-align: center;">
+        <th style="border: 1px solid black; text-align: center;">File</th>            
+    </tr>
+    {% for ds in featuresds %}        
+        <tr style="border: 1px solid black; text-align: center;">
+            <td style="border: 1px solid black; text-align: center;"><h3 align='center'><a href='datasets/{{ds}}' onclick="Mudarestado('div_progress')">{{ds}}</a></h3></td>            
+        </tr>        
+    {% endfor %}
+    </table>
+</div>
+</br>
+<div align="center">
+    <div class="progress" id="div_progress" style="display: none;">
+        <div class="progress-bar"><i>getting data...</i></div>
+    </div>
+</div>
+<script>
+    function Mudarestado(el) {
+        var display = document.getElementById(el).style.display;
+        if(display == "none")
+            document.getElementById(el).style.display = 'block';
+        else
+            document.getElementById(el).style.display = 'none';
+    }
+</script>
+
+
+</br>
+<h3><i>Upload your own event log (.csv):</i></h3><br>
+<div style="width: 250px">
+<form action = "/viewds" method = "post"  
+enctype = "multipart/form-data">
+    <h4>(Step 1) Specify an event log:</h4>
+    <!--<label for='choose-file' style="background-color: #0CA6BB; border-radius: 5px; color: #fff; cursor: pointer; padding: 6px 20px">Browser &#187;</label>-->
+    <input type = "file" name = "file" id="choose-file" class="filestyle" data-buttonBefore="true" data-placeholder="No file" data-btnClass="btn-primary">
+    <h4>(Step 2) Upload it to use:</h4>
+    <!--<label for='upload-file' style="background-color: #0CA6BB; border-radius: 5px; color: #fff; cursor: pointer; padding: 6px 20px">Upload &#187;</label>-->
+    <input type = "submit" value="Upload" id="upload-file" class="btn btn-primary">
+</form>
+</div>
+{% endblock %}

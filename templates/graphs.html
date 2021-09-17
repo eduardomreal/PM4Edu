@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="background-color: #DCDCDC; width: auto; padding-bottom: 20px; border-radius: 6px;">
+    <div>
+        <div style="background-color: #E6E6E6; padding-bottom: 5px; border-radius: 6px;">
+            
+            <!--
+            <div class="progress">
+                <div class="progress-bar"></div>
+            </div>
+            -->
+            <div>
+                <h2 style="text-align: center; padding-top: 15px;"><b>Event Log:</b> <i>{{dataset}}</i></h2>
+            </div>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            </br>
+            <div class="row marketing">
+                <h3 style="text-align: center;"><b>Overall information &#128260;</b></h3>
+                <div class="col-lg-12">                    
+                    <table align="center" style="border: 2px solid black; font-size:medium; width: 30%; background-color:#F0FFF0">
+                        <tr style="border: 2px solid black;">
+                            <td>Cases</td>
+                            <td style="text-align: center;">{{count_students}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Event classes</td>
+                            <td style="text-align: center;">{{classes_events}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Total events</td>
+                            <td style="text-align: center;">{{total_events}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>First event</td>
+                            <td style="text-align: center;">{{first_event}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Last event</td>
+                            <td style="text-align: center;">{{last_event}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Mean events</td>
+                            <td style="text-align: center;">{{mean_events}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Median events</td>
+                            <td style="text-align: center;">{{median_events}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Mode events</td>
+                            <td style="text-align: center;">{{mode_events}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Max events</td>
+                            <td style="text-align: center;">{{max_events}}</td>                            
+                        </tr>
+                        <tr style="border: 2px solid black;">
+                            <td>Min events</td>
+                            <td style="text-align: center;">{{min_events}}</td>                            
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            </br>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            <div class="row marketing">
+                <h3 style="text-align: center;"><b>Overall main attributes EPM &#8859; </b></h3>
+                <div class="col-lg-6">                        
+                    <h4 style="text-align: center;"><b><i>Activity(ies) &#9997; </i></b></h4>
+                    <div class="chart" id="bargraph" style="margin-left: 20px; margin-right: 20px;">
+                        <script>
+                            var graphs = {{bar | safe}};                            
+                            Plotly.plot('bargraph',graphs,{});                           
+                        </script>
+                    </div>                    
+                </div>
+                <div class="col-lg-6">                    
+                    <h4 style="text-align: center;"><b><i>Student(s) &#129299; </i></b></h4>
+                    <div class="chart" id="bargraph2" style="margin-left: 20px; margin-right: 20px;">
+                        <script>
+                            var graphs = {{bar2 | safe}};                            
+                            Plotly.plot('bargraph2',graphs,{});                           
+                        </script>
+                    </div>                    
+                </div>        
+            </div>
+            </br>            
+            <div class="row marketing">
+                <div class="col-lg-12">
+                    <h4 style="text-align: center;"><b><i>Timestamp(s) &#8987; </i></b></h4>
+                    <div class="chart" id="bargraph3" style="margin-left: 20px; margin-right: 20px;">
+                        <script>
+                            var graphs = {{bar3 | safe}};                            
+                            Plotly.plot('bargraph3',graphs,{});                           
+                        </script>
+                    </div>                    
+                </div>                        
+            </div>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            <div class="row marketing">
+                <h3 style="text-align: center;"><b>Start&End activities &#8633; </b></h3>
+                <div class="col-lg-6">
+                    <div style="text-align: center; background-color: #0BFB54; margin-left: 20px; border-radius: 6px;">
+                        <h3 style="padding-top: 10px;"><b>Start activity(ies)</b></h3>
+                        {% for key, value in start_activities.items() %}                        
+                            {% if value == 1%}
+                                <h4>{{key}}: {{value | int}} student</h4>
+                            {% else %}
+                                <h4>{{key}}: {{value | int}} students</h4>
+                            {% endif %}
+                        {% endfor %}                        
+                    </div>
+                </div>    
+            
+                <div class="col-lg-6">
+                    <div style="text-align: center; background-color: orange; margin-right: 20px; margin-left: 20px;  border-radius: 6px;">
+                        <h3 style="padding-top: 10px; "><b>End activity(ies)</b></h3>
+                        {% for key, value in end_activities.items() %}                        
+                            {% if value == 1%}
+                                <h4>{{key}}: {{value | int}} student</h4>
+                            {% else %}
+                                <h4>{{key}}: {{value | int}} students</h4>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            <div class="row marketing">
+                <h3 style="text-align: center;"><b>Activities-Pair Control-Flow &#8644;</b></h3>
+                <div class="col-lg-12">
+                    <table align="center" style="border: 2px solid black; font-size:medium; width: 20%; background-color:mistyrose">
+                        {% for pair, value in dfg.items() %}
+                            <tr style="border: 2px solid black;">                                
+                                <td style="text-align: center;">{{pair[0]}} &#62; {{pair[1]}}: {{value | int}}</td>                            
+                            </tr>                            
+                        {% endfor %}                      
+                    </table>                    
+                </div>        
+            </div>
+            
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">           
+            <h3 style="text-align: center;"><b>Process Model &#9989; </b></h3>
+            <div class="model_image" align="center">
+                <img src="{{url_for('static', filename='images/epm_model.jpg')}}"></img>    
+            </div>
+
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">           
+            <h3 style="text-align: center;"><b>Dotted chart of the activities sequences</b></h3>
+            <div class="model_image" align="center">
+                <img src="{{url_for('static', filename='images/epm_dotted.jpg')}}"></img>    
+            </div>
+
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">           
+            <h3 style="text-align: center;"><b>Students Traces &#8674; &#8674; &#8674; </b></h3>
+            <div style="padding-left: 10px; padding-right: 10px;">
+                <table align="center" style="border: 2px solid black; width: auto;">
+                <tr style="border: 2px solid black; text-align: center; background-color: mediumseagreen;">
+                    <th style="border: 1px solid black; text-align: center;"><h4><b>#</b></h4></th>
+                    <th style="border: 1px solid black; text-align: center;"><h4><b>Student</b></h4></th>
+                    <th style="border: 1px solid black; text-align: center;"><h4><b>Trace</b></h4></th>            
+                </tr>                
+                {% for name in range(count_students) %}                  
+                    <tr style="border: 1px solid black;">
+                        <td style="border: 1px solid black; padding: 5px; background-color: mediumturquoise; text-align: center;"><h5><b>{{name+1}}</b></h5></td>
+                        <td style="border: 1px solid black; padding: 5px; background-color: mediumturquoise; text-align: center;"><h5><b>{{students[name]}} ({{students_events[name]}} event(s))</b></h5></td>
+                        <td style="border: 1px solid black; padding: 5px;"><h5>{{students_traces[name]}}</h5></td>            
+                    </tr>
+                {% endfor %}                
+                </table>
+            </div>            
+        </div>
+    </div>        
+</div>
+{% endblock %}
+

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="background-color: #DCDCDC; width: auto; padding-bottom: 20px; border-radius: 6px;">
+    <div>
+        <div style="background-color: #E6E6E6; padding-bottom: 5px; border-radius: 6px;">
+            <h2 style="text-align: center; padding-top: 15px;"><b>Educational Process Mining</b></h2>
+            <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+            <form class="form-features" method="POST" action='/modelprocess/{{dataset}}'>
+                <div>
+                    <h4><b>Choose the PM attributes:</b></h4>
+                    
+                    <h5><b>Case (<i>central objects of analysis</i>):</b></h5>
+                    <select name="case">
+                        {% for col in columns %}
+                            <option value="{{col}}">{{col}}</option>       
+                        {% endfor %}
+                    </select>
+            
+                    <h5><b>Activity Name (<i>activities which generate
+                        events</i>):</b></h5>
+                    <select name="activity">
+                        {% for col in columns %}
+                            <option value="{{col}}">{{col}}</option>       
+                        {% endfor %}
+                    </select>
+            
+                    <h5><b>Timestamp (<i>date and time of event</i>):</b></h5>
+                    <select name="timestamp">            
+                        {% for col in columns %}
+                            <option value="{{col}}">{{col}}</option>       
+                        {% endfor %}
+                    </select>
+                    <br>                
+                    <h3><b>Choose the PM method (<i>process discovery</i>):</b></h3>
+                    <select name="pm_method">
+                        <option value="hm">Heuristic Miner</option>
+                        <option value="dfg">Directly-Follows Graph</option>
+                    </select>          
+                </div>
+                <div style="padding-bottom: 5px;">
+                    <br>
+                    <button class="btn btn-lg btn-primary btn-block" type="submit" style="width: 200px; height: 50px; margin-top: 20px;">Get Process Model</button>
+                </div>
+            </form>
+        </div>
+    </div>    
+</div>
+
+{% endblock %}
