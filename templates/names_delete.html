@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="width: auto; border-radius: 6px;">
+  <form class="form-features" method="post" action='/datasets/{{dataset}}/preprocessed_names_deleted/'>
+    <h2 style="text-align: center; padding-top: 15px;"><b>Data Cleaning & Segmentation</b></h2>
+    <h4 class="form-features-heading" style="text-align: center;">Preprocessing options (select not required)</h4>
+    <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+    
+    <div class="col" style="display: flex; justify-content: center; align-items: center;">      
+      <h4 style="text-align: center;"><b>New event log name: (extension of  {{dataset}}_):&nbsp;</b></h4>
+      <input type="text" name="newdataset"><br>
+    </div>
+    <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">    
+    
+    <h3 style="text-align: center;"><b>Selection the ID(s)/Name(s) student(s)</b></h3>
+    <h4 style="text-align: center;">Press Ctrl to select multiple!</h4>
+    <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+    
+    <div class="row marketing">
+      <div class="col-lg-4"></div>
+      <div class="col-lg-4" style="text-align: center;">
+        <h4><b>Choose a select mode:</b></h4>                     
+        <input type="radio" id="radio_delete" name="radio_preprocessing" value="radio_delete" checked>
+        <label for="radio_delete">Delete elements</label><br>
+        <input type="radio" id="radio_keep" name="radio_preprocessing" value="radio_keep">
+        <label for="radio_keep">Keep elements</label>
+      </div>
+      <div class="col-lg-4"></div>
+    </div>
+    
+    <div class="row">      
+      <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">      
+      <h4 style="text-align: center;"><b>Name(s) selection (keep/delete rows!):</b></h4>      
+      <br>      
+      <div class="col">                
+        {% set data = [] %}
+        {% for i, j in df_prep[choice_names_attribute].items() %}            
+          <p style="display: none;">{{data.append(j)}}</p>
+          {% set aux = j %}          
+        {% endfor %}
+        
+        {% set slots = [] %}
+        {% for slot in data if slot not in slots %}
+          <p style="display: none;">{{slots.append(slot)}}</p>
+        {% endfor %}
+        
+        {% if slots|length > 40 %}
+          <div class="col" style="display: flex; justify-content: center; align-items: center;">
+            <select multiple name="names_rows" id="elements" size="10">
+              {% for el_name in slots %}                
+                <option value="{{el_name}}">{{el_name}}</option>
+              {% endfor %}
+            </select>
+          </div>              
+        {% else %}
+          <div class="col" style="display: flex; justify-content: center; align-items: center;">
+            <select multiple name="names_rows" id="elements" size="{{slots|length}}">
+              {% for el_name in slots %}                
+                <option value="{{el_name}}">{{el_name}}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}          
+        <br>        
+      </div>      
+    </div>    
+    <button class="btn btn-lg btn-primary btn-block" type="submit" style="width: 220px; height: 50px; margin: 0 auto;">Create New Log</button>
+  </form>
+</div>
+{% endblock %}

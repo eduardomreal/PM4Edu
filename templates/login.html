@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row marketing">
+    <div class="col-md-4 col-md-offset-4">
+    <h2>Login</h2>
+        <form action="" method="POST">
+            {{ form.csrf_token }}
+            <div class="form-group">
+                <labe>Username</labe>
+                {{ form.username(class="form-control", placeholder="seu_usuario") }}
+                {% if form.errors.username %}
+                <div class="alert alert-danger" role="alert">
+                    <ul>
+                    {% for e in form.errors.username %}
+                        <li>{{ e }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <labe>Password</labe>
+                {{ form.password(class="form-control") }}
+                {% if form.errors.password %}
+                <div class="alert alert-danger" role="alert">
+                    <ul>
+                    {% for e in form.errors.password %}
+                        <li>{{ e }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>            
+            <button type="submit" class="btn btn-default">Submit</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

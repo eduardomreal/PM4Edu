@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="width: auto; border-radius: 6px;">
+  <form class="form-features" method="post" action='/names_delete/{{dataset}}'>
+    <h2 style="text-align: center; padding-top: 15px;"><b>Data Cleaning & Segmentation</b></h2>
+    <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">    
+    <div class="row marketing">
+      <div class="col-lg-4"></div>
+      <div class="col-lg-4" style="text-align: center;">        
+        <h4><b>Select the ID/name student attribute:</b></h4>
+        <select name='names_attribute'>            
+          {% for col in columns %}
+          <option value="{{col}}">{{col}}</option>       
+          {% endfor %}
+        </select>
+      </div>  
+      <div class="col-lg-4"></div>     
+    </div>      
+    </br>
+    <button class="btn btn-lg btn-primary btn-block" type="submit" style="width: 220px; height: 50px; margin: 0 auto;">Go to names selection</button>
+  </form>
+</div>
+{% endblock %}

@@ -21,12 +21,23 @@
 <div>
     <table align="center" style="border: 2px solid black; width: 30%;">
     <tr style="border: 2px solid black; text-align: center;">
-        <th style="border: 1px solid black; text-align: center;">File</th>            
+        <th colspan="2" style="border: 1px solid black; text-align: center;">File</th>            
     </tr>
-    {% for ds in featuresds %}        
+    {% for ds, value in featuresds_size.items() %}            
         <tr style="border: 1px solid black; text-align: center;">
-            <td style="border: 1px solid black; text-align: center;"><h3 align='center'><a href='datasets/{{ds}}' onclick="Mudarestado('div_progress')">{{ds}}</a></h3></td>            
-        </tr>        
+            <td style="border: 1px solid black; text-align: center;"><h3 align='center'><a href='datasets/{{ds}}' onclick="Getting_data('div_progress')">{{ds}}</a><h4 style="font-size: 12px;"><i>(File size: {{value|round(1, 'floor')}} Kbytes)</i></h4></h3></td>
+            <td>
+                <a href="/get_csv/{{ds}}.csv" download="{{ds}}.csv">Download</a>
+            </td>
+        </tr>
+    {% endfor %}
+    {% for ds, value in featuresds_size_users.items() %}            
+        <tr style="border: 1px solid black; text-align: center;">
+            <td style="border: 1px solid black; text-align: center;"><h3 align='center'><a href='datasets/{{ds}}' onclick="Getting_data('div_progress')">{{ds}}</a><h4 style="font-size: 12px;"><i>({{value|round(1, 'floor')}} Kbytes)</i></h4></h3></td>
+            <td>
+                <a href="/get_csv_user/{{ds}}.csv" download="{{ds}}.csv">Download</a>
+            </td>
+        </tr>
     {% endfor %}
     </table>
 </div>
@@ -57,7 +68,24 @@ enctype = "multipart/form-data">
     <input type = "file" name = "file" id="choose-file" class="filestyle" data-buttonBefore="true" data-placeholder="No file" data-btnClass="btn-primary">
     <h4>(Step 2) Upload it to use:</h4>
     <!--<label for='upload-file' style="background-color: #0CA6BB; border-radius: 5px; color: #fff; cursor: pointer; padding: 6px 20px">Upload &#187;</label>-->
-    <input type = "submit" value="Upload" id="upload-file" class="btn btn-primary">
+    <input type = "submit" value="Upload" id="upload-file" class="btn btn-primary" onclick="Getting_data('div_progress_upload_log')">
 </form>
 </div>
+
+<div align="center">
+    <div class="progress" id="div_progress_upload_log" style="display: none;">
+        <div class="progress-bar"><i>uploading event log...</i></div>
+    </div>
+</div>
+
+<script>
+    function Getting_data(el) {
+        var display = document.getElementById(el).style.display;
+        if(display == "none")
+            document.getElementById(el).style.display = 'block';
+        else
+            document.getElementById(el).style.display = 'none';
+    }
+</script>
+
 {% endblock %}

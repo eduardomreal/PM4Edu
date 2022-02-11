@@ -5,6 +5,21 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
 
+from flask_wtf import Form
+from wtforms import StringField, PasswordField, BooleanField
+from wtforms.validators import DataRequired
+
+from flask_login import LoginManager
+from flask_login import login_user, logout_user
+from flask_login import login_required, current_user
+
+import time
+
+#==== form ======
+class LoginForm(Form):
+    username = StringField("username", validators=[DataRequired()])
+    password = PasswordField("password", validators=[DataRequired()])
+    remember_me = BooleanField("remeber_me")
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -13,9 +28,47 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+
+#==== tables ======
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String, unique=True)
+    password = db.Column(db.String)
+    name = db.Column(db.String)
+    email = db.Column(db.String, unique=True)
+
+    @property
+    def is_authenticated(self):
+        return True
+    
+    @property
+    def is_active(self):
+        return True
+    
+    @property
+    def is_anonymous(self):
+        return False
+    
+    def get_id(self): #is a method
+        return str(self.id) #it is using unicode, converter string
+
+    def __init__(self, username, password, name, email):
+        self.username = username
+        self.password = password
+        self.name = name
+        self.email = email
+    
+    def __repr__(self):
+        return "<User %r>" % self.username
+#====== end tables ======
+
 manager = Manager(app)
 manager.add_command('db', MigrateCommand)
 
+lm = LoginManager()
+lm.init_app(app)
 
 #====== routes =========
 import os
@@ -52,18 +105,26 @@ from pm4py.algo.filtering.log.end_activities import end_activities_filter
 import sweetviz as sv
 import pandas_profiling
 from pandas_profiling import ProfileReport
-#import webbrowser
+
+from datetime import datetime
 
 #basedir = os.path.abspath(os.path.dirname(__file__))
 ds_folder = './'#os.path.dirname(os.path.abspath(__file__))
 models_folder = './static/images'
 #reports_folder = './templates/reports'
 reports_folder = './static'
+os.environ["PATH"] += os.pathsep + r'/usr/bin'
 # === loads ====
 def datasetList():
     datasets = [x.split('.')[0] for f in [os.path.join(ds_folder, 'datasets')] for x in os.listdir(f)]
     extensions = [x.split('.')[1] for f in [os.path.join(ds_folder, 'datasets')] for x in os.listdir(f)]
     folders = [f for f in [os.path.join(ds_folder, 'datasets')] for x in os.listdir(f)]
+    return datasets, extensions, folders
+
+def datasetList_users():
+    datasets = [x.split('.')[0] for f in [os.path.join('./datasets_temp/'+current_user.username)] for x in os.listdir(f)]
+    extensions = [x.split('.')[1] for f in [os.path.join('./datasets_temp/'+current_user.username)] for x in os.listdir(f)]
+    folders = [f for f in [os.path.join('./datasets_temp/'+current_user.username)] for x in os.listdir(f)]
     return datasets, extensions, folders
 
 #Load columns of the dataset
@@ -77,7 +138,15 @@ def loadColumns(dataset):
             df = pd.read_csv(os.path.join(folders[datasets.index(dataset)], dataset + '.csv'), nrows=0)
         return df.columns
 
-#Load Dataset    
+def loadColumns_users(dataset):
+    datasets, extensions, folders = datasetList_users()
+    if dataset in datasets:
+        extension = extensions[datasets.index(dataset)]
+        if extension == 'csv':
+            df = pd.read_csv(os.path.join(folders[datasets.index(dataset)], dataset + '.csv'), nrows=0)
+        return df.columns
+
+#====Load Dataset
 def loadDataset(dataset):
     datasets, extensions, folders = datasetList()
     if dataset in datasets:
@@ -87,18 +156,35 @@ def loadDataset(dataset):
         elif extension == 'csv':
             df = pd.read_csv(os.path.join(folders[datasets.index(dataset)], dataset + '.csv'))
         return df
+
+def loadDataset_users(dataset):
+    datasets, extensions, folders = datasetList_users()
+    if dataset in datasets:
+        extension = extensions[datasets.index(dataset)]
+        if extension == 'csv':
+            df = pd.read_csv(os.path.join(folders[datasets.index(dataset)], dataset + '.csv'))
+        return df
+
 #===============
 
 def create_xes(df, ca, ac, ti):
-    find_ds = [x.split('.')[0] for f in [os.path.join(ds_folder, 'datasets')] for x in os.listdir(f)]
-    path_ds = './datasets'
-    if df in find_ds:
-        df = pd.read_csv(os.path.join(path_ds, df + '.csv'))
-    
+    df_name = df
+    if df_name == 'log_test':
+        find_ds = [x.split('.')[0] for f in [os.path.join(ds_folder, 'datasets')] for x in os.listdir(f)]
+        path_ds = './datasets'
+        if df_name in find_ds:
+            df = pd.read_csv(os.path.join(path_ds, df + '.csv'))
+    else:
+        find_ds = [x.split('.')[0] for f in [os.path.join(ds_folder, 'datasets_temp/'+current_user.username)] for x in os.listdir(f)]
+        path_ds = './datasets_temp/'+current_user.username
+        if df_name in find_ds:
+            df = pd.read_csv(os.path.join(path_ds, df + '.csv'))
+
+
     #======= find column datetime type =======
     col_ts = 0
     col_names = dict(df.loc[0])#list(df.columns.values)
-    
+
     col_names = {str(key): str(value) for key, value in col_names.items()}
 
     for k in col_names:
@@ -106,10 +192,10 @@ def create_xes(df, ca, ac, ti):
             if ('/' in v) and ('/' in v):
                 col_ts = 1
                 att_ts = k
-    
+
     if col_ts == 1:
         df = dataframe_utils.convert_timestamp_columns_in_df(df, timest_format='%d/%m/%Y %H:%M', timest_columns=att_ts)
-    
+
     df.rename(columns={ca: 'case:concept:name'}, inplace=True)
     df.rename(columns={ac: 'concept:name'}, inplace=True)
     df.rename(columns={ti: 'time:timestamp'}, inplace=True)
@@ -117,7 +203,7 @@ def create_xes(df, ca, ac, ti):
     parameters = {log_converter.Variants.TO_EVENT_LOG.value.Parameters.CASE_ID_KEY: 'case:concept:name'}
     events_log = log_converter.apply(df, parameters=parameters, variant=log_converter.Variants.TO_EVENT_LOG)
 
-    xes_exporter.apply(events_log, os.path.join(ds_folder+"datasets",'file.xes'))
+    xes_exporter.apply(events_log, os.path.join(ds_folder+"datasets_temp/"+current_user.username, df_name+'.xes'))
 
 def clear_files():
     if os.path.exists(os.path.join(models_folder,'epm_model.jpg')):
@@ -128,7 +214,11 @@ def clear_files():
         os.remove(os.path.join(ds_folder+"datasets",'file.xes'))
     if os.path.exists(os.path.join(reports_folder,'df_report.html')):
         os.remove(os.path.join(reports_folder,'df_report.html'))
-    
+    if os.path.exists(os.path.join('./datasets_temp/', current_user.username)):
+        filelist = glob.glob(os.path.join('./datasets_temp/', current_user.username, "*.xes"))
+        for f in filelist:
+            os.remove(f)
+
 def clear_dataset_user():
     files = glob.glob("./datasets/*")
     print(files)
@@ -136,51 +226,38 @@ def clear_dataset_user():
         if f != './datasets/log_test.csv':# and f != './datasets/log_test2.csv':
             os.remove(f)
 
-
-    #for f in os.listdir(ds_folder+"datasets"):
-    #    os.remove(os.path.join(ds_folder+"datasets", f))
-
-
 def create_plot(df, c):
     x = df[c].value_counts()#np.linspace(0, 1, N)
     y = df[c].value_counts().index#np.random.randn(N)
     df = pd.DataFrame({'x': x, 'y': y}) # creating a sample dataframe
-    
-    #fig = go.Figure([go.Bar(x=x, y=y, orientation='h')])
-    #fig.write_image(os.path.join(models_folder,'plot_attribute.jpg'))
-    #fig.write_html(os.path.join(models_folder,'plot_attribute.html'))
-    
+
     data = [
         go.Pie(
             #===== orientation = h ==========
             values=df['x'], # assign x as the dataframe column 'x'
             labels = df['y']
             #title='Activity(ies)'
-        )              
-    ]    
+        )
+    ]
     graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-    
+
     return graphJSON
 
 def create_plot_students(df, c):
     x = df[c].value_counts()#np.linspace(0, 1, N)
     y = df[c].value_counts().index#np.random.randn(N)
     df = pd.DataFrame({'x': x, 'y': y}) # creating a sample dataframe
-    
-    #fig = go.Figure([go.Bar(x=x, y=y, orientation='h')])
-    #fig.write_image(os.path.join(models_folder,'plot_attribute.jpg'))
-    #fig.write_html(os.path.join(models_folder,'plot_attribute.html'))
-    
+
     data = [
         go.Pie(
             #===== orientation = h ==========
             values=df['x'], # assign x as the dataframe column 'x'
             labels = df['y']
-            #title='Student(s)'            
-        )              
-    ]    
+            #title='Student(s)'
+        )
+    ]
     graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-    
+
     return graphJSON
 
 def create_plot2(df, c):
@@ -188,26 +265,25 @@ def create_plot2(df, c):
     #print(df)
     x = df[c].value_counts(sort=False)#np.linspace(0, 1, N)
     y = df[c].value_counts(sort=False).index#np.random.randn(N)
-    
+
     df = pd.DataFrame({'x': x, 'y': y}) # creating a sample dataframe
     #df = dataframe_utils.convert_timestamp_columns_in_df(df, timest_format='%d/%m/%Y %H:%M', timest_columns='y')
-    
-    
+
     #fig = go.Figure([go.Bar(x=x, y=y, orientation='h')])
     #fig.write_image(os.path.join(models_folder,'plot_attribute.jpg'))
     #fig.write_html(os.path.join(models_folder,'plot_attribute.html'))
-    
+
     data = [
         go.Bar(
             #===== orientation = h ==========
             x=df['y'], # assign x as the dataframe column 'x'
-            y=df['x'],            
-            marker=dict(color='#123456')         
-        )              
+            y=df['x'],
+            marker=dict(color='#123456')
+        )
     ]
-    
+
     graphJSON = json.dumps(data, cls=plotly.utils.PlotlyJSONEncoder)
-    
+
     return graphJSON
 
 def create_report_sweet(df):
@@ -236,57 +312,132 @@ def getIndexes(dfObj, value, listOfPos):
     return listOfPos
 
 #=============================
+@lm.user_loader
+def load_user(id):
+  return User.query.filter_by(id=id).first()
+
+@lm.unauthorized_handler
+def unauthorized_callback():
+       return redirect(url_for('login'))
 
 @app.route('/index')
 @app.route('/')
+@login_required
 def index():
     clear_files()
-    clear_dataset_user()
+    #clear_dataset_user()
     return render_template('index.html')
+
+@app.route("/login", methods=["GET","POST"])
+def login():
+    if current_user.is_authenticated:        
+        return redirect('/login')
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and user.password == form.password.data:
+            login_user(user)
+            if os.path.exists(os.path.join('./datasets_temp/', current_user.username)):
+                os.rmdir(os.path.join('./datasets_temp/', current_user.username))
+                #shutil.rmtree("./datasets_temp/"+current_user.username)
+            path = os.path.join('./datasets_temp/', current_user.username)
+            os.mkdir(path, mode=0o777)
+            return redirect(url_for("index"))
+            flash("Logged in.")
+        else:
+            flash("Invalid login.")
+    return render_template("login.html", form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+  files = glob.glob("./datasets_temp/"+current_user.username+"/*")
+  for f in files:
+     os.remove(f)
+  os.rmdir(os.path.join('./datasets_temp/', current_user.username))
+  logout_user()
+  flash("Logged out.")
+  return redirect(url_for('index'))
 
 #==== show datasets ====
 @app.route('/viewds', methods = ['GET', 'POST'])
+@login_required
 def viewds():
     clear_files()
     datasets,_,folders = datasetList()
     originalds = []
     featuresds = []
+
+    #====users=====
+    datasets_users,_users,folders_users= datasetList_users()
+    originalds_users = []
+    featuresds_users = []
+    #==============
+
     for i in range(len(datasets)):
         if folders[i] == 'datasets': originalds += [datasets[i]]
         else: featuresds += [datasets[i]]
+    featuresds_size = dict((arquivo, os.path.getsize('./datasets/'+arquivo+'.csv')/1e+3) for arquivo in featuresds)
+
+    for i in range(len(datasets_users)):
+        if folders_users[i] == 'datasets_temp/'+current_user.username: originalds_users += [datasets_users[i]]
+        else: featuresds_users += [datasets_users[i]]
+    featuresds_size_users = dict((arquivo, os.path.getsize('./datasets_temp/'+current_user.username+'/'+arquivo+'.csv')/1e+3) for arquivo in featuresds_users)
+
     if request.method == 'POST':
             f = request.files['file']
-            f.save(os.path.join(ds_folder+'datasets', f.filename))
+            path_user = os.path.join('./datasets_temp/'+current_user.username)
+            f.save(os.path.join(path_user, f.filename))
+            #f.save(os.path.join(ds_folder+'datasets', f.filename))
             return redirect(url_for('viewds'))
-    return render_template('viewds.html', originalds = originalds, featuresds = featuresds)
+    return render_template('viewds.html', originalds = originalds, featuresds = featuresds, featuresds_size = featuresds_size, originalds_users = originalds_users, featuresds_users = featuresds_users, featuresds_size_users = featuresds_size_users)
 
 @app.route('/tutorial')
+@login_required
 def tutorial():
     return render_template('tutorial.html')
 
 @app.route('/publications')
+@login_required
 def publications():
     return render_template('publications.html')
 
 
 @app.route('/datasets/')
+@login_required
 def datasets():
     return redirect('/')
 
 @app.route('/datasets/<dataset>', methods=['GET', 'POST'])
-#def dataset(description = None, head = None, ev = None, att = None, missing_v = None, att_ts = None, dataset = None):
+@login_required
 def dataset(ev = None, head = None, tail = None, att = None, att_ts = None, dataset = None, columns = None, bar = None, df = None, description = None):
-    df = loadDataset(dataset)
-    columns = loadColumns(dataset)
+    if dataset == 'log_test':
+        df = loadDataset(dataset)
+        columns = loadColumns(dataset)
+    else:
+        df = loadDataset_users(dataset)
+        columns = loadColumns_users(dataset)
 
-    #==== update df correct order - LMS-Moodle
-    #df_aux = pd.DataFrame(columns=columns)
-    #len_df = len(df)
-    #j = len_df - 1
-    #for i in range(len_df):
-    #    df_aux = df_aux.append(df.iloc[j], ignore_index=True)
-    #    j = j - 1
-    #df = df_aux
+    if 'Usuário afetado' in columns:
+        df.drop('Usuário afetado', inplace=True, axis=1)
+    if 'Descrição' in columns:
+        df.drop('Descrição', inplace=True, axis=1)
+    if 'Origem' in columns:
+        df.drop('Origem', inplace=True, axis=1)
+    if 'endereço IP' in columns:
+        df.drop('endereço IP', inplace=True, axis=1)
+
+    if 'Componente' in columns:
+        df.drop(df.loc[df['Componente']=='Sistema'].index, inplace=True)
+        df.drop(df.loc[df['Componente']=='Logs'].index, inplace=True)
+    if 'Component' in columns:
+        df.drop(df.loc[df['Component']=='Sistema'].index, inplace=True)
+        df.drop(df.loc[df['Component']=='Logs'].index, inplace=True)
+
+    if dataset == 'log_test':
+        df.to_csv(os.path.join(ds_folder+'datasets', dataset+'.csv'), index=False)#atualiza csv
+    else:
+        df.to_csv(os.path.join('./datasets_temp/'+current_user.username, dataset+'.csv'), index=False)#atualiza csv
 
     full_report = request.form.get('radio_report')
     create_report_profiling(df)
@@ -294,32 +445,11 @@ def dataset(ev = None, head = None, tail = None, att = None, att_ts = None, data
         create_report_sweet(df)
     elif full_report == 'radio_profiling':
         create_report_profiling(df)
-        #new = 2 # open in a new tab, if possible
-        #url = os.path.join(reports_folder,'df_report.html')
-        #webbrowser.open(url,new=new)
 
-    #========plot some attribute=======
-    #attrib_plot = request.form.get('att-plot')
-    #if attrib_plot != None:
-    #    bar = create_plot(df, attrib_plot)
-    
-    #df_filter = df.groupby(["Component", "Event Context", "Event Name"], sort=True, as_index=True)["Event Name"].count().reset_index(name="count")
-    #len_df = len(df_filter)
-    #for i in range(len_df):
-    #  for j in range(i):
-    #    if df_filter.iloc[i, 0] == df_filter.iloc[j, 0]:
-    #        df_filter.iloc[i, 0] = ''
-    #    if df_filter.iloc[i, 1] == df_filter.iloc[j, 1]:
-    #        df_filter.iloc[i, 1] = ''
-    
     df.reset_index(drop=True, inplace=True)
-       
-    #if os.path.exists(os.path.join(models_folder,'epm_model.jpg')):
-    #    os.remove(os.path.join(models_folder,'epm_model.jpg'))
 
     #=========================================
     try:
-        #missing_v = (df.isnull().sum() / df.shape[0]).sort_values(ascending=False)
         description = df.describe().round(2)
         description = description.rename(index={'count': 'Occurrences', 'unique': 'Unique values', 'top': 'Majority', 'freq': 'Majority-occurrences'})
         head = df.head(10)
@@ -346,15 +476,25 @@ def dataset(ev = None, head = None, tail = None, att = None, att_ts = None, data
                            )
 
 @app.route('/pm/<dataset>', methods=['GET', 'POST'])
+@login_required
 def pm(dataset):
-    df = loadDataset(dataset)
-    columns = loadColumns(dataset)
+    if dataset == 'log_test':
+        df = loadDataset(dataset)
+        columns = loadColumns(dataset)
+    else:
+        df = loadDataset_users(dataset)
+        columns = loadColumns_users(dataset)
     return render_template('pm.html', df=df, columns=columns, dataset=dataset)
 
 @app.route('/modelprocess/<dataset>', methods=['GET', 'POST'])
-def modelprocess(dataset):          
+@login_required
+def modelprocess(dataset):
     df = dataset
-    df_plot = loadDataset(dataset)
+    if dataset == 'log_test':
+        df_plot = loadDataset(dataset)
+    else:
+        df_plot = loadDataset_users(dataset)
+    #df_plot = loadDataset(dataset)
     ca = request.form.get('case')
     ac = request.form.get('activity')
     ti = request.form.get('timestamp')
@@ -405,7 +545,8 @@ def modelprocess(dataset):
     bar2 = create_plot_students(df_plot, ca)
     bar3 = create_plot2(df_plot, ti)
 
-    log = xes_importer.apply(os.path.join(ds_folder+"datasets",'file.xes'))
+    log = xes_importer.apply(os.path.join('./datasets_temp/', current_user.username, dataset+'.xes'))
+    #log = xes_importer.apply(os.path.join(ds_folder+"datasets",'file.xes'))
     
     start_activities = pm4py.get_start_activities(log)    
     end_activities = pm4py.get_end_activities(log)
@@ -444,15 +585,15 @@ def modelprocess(dataset):
     median_events = statistics.median(students_events)
     mode_events = statistics.mode(students_events)
     
-    dfg = dfg_miner.apply(log)#control-flow pairs-values
+    dfg = dfg_miner.apply(log)
+    #control-flow pairs-values
     
     count_students = len(students)
     if pm_alg == 'hm':
         heu_net = heuristics_miner.apply_heu(log, parameters={"dependency_thresh": -1, "and_measure_thresh": 1, "dfg_pre_cleaning_noise_thresh":0.0})        
         gviz = hn_visualizer.apply(heu_net)    
         hn_visualizer.save(gviz, os.path.join(models_folder,'epm_model.jpg'))
-    else:        
-        #dfg = dfg_miner.apply(log)            
+    else:
         gviz = dfg_visualizer.apply(dfg, log=log, variant=dfg_visualizer.Variants.FREQUENCY)
         dfg_visualizer.save(gviz, os.path.join(models_folder,'epm_model.jpg'))
     
@@ -460,12 +601,418 @@ def modelprocess(dataset):
 
 
 @app.route('/preprocessing/<dataset>', methods=['GET', 'POST'])
+@login_required
 def preprocessing(dataset = dataset):
-    columns = loadColumns(dataset)
-    df_prep = loadDataset(dataset)
+    #columns = loadColumns(dataset)
+    if dataset == 'log_test':
+        df_prep = loadDataset(dataset)
+    else:
+        df_prep = loadDataset_users(dataset)
+    #df_prep = loadDataset(dataset)
+    #======= find column datetime type =======
+    col_ts = 0
+    col_names = dict(df_prep.loc[0])#list(df.columns.values)
+    col_names = {str(key): str(value) for key, value in col_names.items()}
+    for k in col_names:
+        for v in col_names[k]:
+            if ('/' in v) and ('/' in v):
+                col_ts = 1
+                att_ts = k
+    #==== get date part timestamp ====
+    ts = []
+    #row_df = 0
+    for i in df_prep[att_ts]:
+        i = i.split(" ")[0]
+        #df_prep[att_ts].loc[row_df] = i
+        #row_df+=1
+        ts.append(i)
+    df_ts = pd.DataFrame(ts) #list to dataframe    
+    df_prep[att_ts] = df_ts
+    #=======================================
+    #df_prep.drop(att_ts, axis=1, inplace=True) #excluir coluna timestamp    
+    columns = df_prep.columns.values #nomes das colunas
     return render_template('preprocessing.html', dataset = dataset, columns=columns, df_prep = df_prep)
 
+@app.route('/preprocess_names_choice_attribute/<dataset>', methods=['GET', 'POST'])
+@login_required
+def preprocess_names_choice_attribute(dataset = dataset):
+    #choice_names_attribute = request.form.get('names_attribute')    
+    if dataset == 'log_test':
+        df_prep = loadDataset(dataset)
+    else:
+        df_prep = loadDataset_users(dataset)
+    columns = df_prep.columns.values #nomes das colunas
+
+    return render_template('names_choice-attribute.html', dataset = dataset, df_prep = df_prep, columns=columns)
+
+@app.route('/attributes_delete/<dataset>', methods=['GET', 'POST'])
+@login_required
+def attributes_delete(dataset = dataset):
+    if dataset == 'log_test':
+        df_prep = loadDataset(dataset)
+    else:
+        df_prep = loadDataset_users(dataset)
+    
+    columns = df_prep.columns.values #nomes das colunas
+    
+    return render_template('attributes_delete.html', dataset = dataset, columns=columns, df_prep = df_prep)
+
+@app.route('/names_delete/<dataset>', methods=['GET', 'POST'])
+@login_required
+def names_delete(dataset = dataset):
+    choice_names_attribute = request.form.get('names_attribute')
+    if dataset == 'log_test':
+        df_prep = loadDataset(dataset)
+    else:
+        df_prep = loadDataset_users(dataset)     
+    columns = df_prep.columns.values #nomes das colunas
+    
+    return render_template('names_delete.html', dataset = dataset, columns=columns, df_prep = df_prep, choice_names_attribute = choice_names_attribute)
+
+@app.route('/elements_delete/<dataset>', methods=['GET', 'POST'])
+@login_required
+def elements_delete(dataset = dataset):
+    if dataset == 'log_test':
+        df_prep = loadDataset(dataset)
+    else:
+        df_prep = loadDataset_users(dataset)
+    
+    #======= find column datetime type =======
+    col_ts = 0
+    col_names = dict(df_prep.loc[0])#list(df.columns.values)
+    col_names = {str(key): str(value) for key, value in col_names.items()}
+    for k in col_names:
+        for v in col_names[k]:
+            if ('/' in v) and ('/' in v):
+                col_ts = 1
+                att_ts = k
+    #==== get date part timestamp ====
+    ts = []
+    #row_df = 0
+    for i in df_prep[att_ts]:
+        i = i.split(" ")[0]        
+        ts.append(i)
+    df_ts = pd.DataFrame(ts) #list to dataframe    
+    df_prep[att_ts] = df_ts
+    #=======================================
+    columns = df_prep.columns.values #nomes das colunas
+    
+    return render_template('elements_delete.html', dataset = dataset, columns=columns, df_prep = df_prep)
+
+@app.route('/anonymize/<dataset>', methods=['GET', 'POST'])
+@login_required
+def anonymize(dataset = dataset):      
+    if dataset == 'log_test':
+        df_prep = loadDataset(dataset)
+    else:
+        df_prep = loadDataset_users(dataset)
+    columns = df_prep.columns.values #nomes das colunas
+    return render_template('anonymize.html', dataset = dataset, df_prep = df_prep, columns=columns)
+
+@app.route('/inverse_order/<dataset>', methods=['GET', 'POST'])
+@login_required
+def inverse_order(dataset = dataset):      
+    if dataset == 'log_test':
+        df_prep = loadDataset(dataset)
+    else:
+        df_prep = loadDataset_users(dataset)
+    columns = df_prep.columns.values #nomes das colunas    
+    return render_template('inverse-order.html', dataset = dataset, df_prep = df_prep, columns=columns)
+
+@app.route('/datasets/<dataset>/preprocessed_attribute_deleted/', methods=['POST'])
+@login_required
+def preprocessed_attribute_deleted(dataset):    
+    manualFeatures = request.form.getlist('manualfeatures')
+    datasetName = request.form.get('newdataset')
+    mode_preprocessing = request.form.get('radio_preprocessing')
+    
+    #====== create log/information about exclusions (or keep) =====
+    if manualFeatures:
+        textfile = open(os.path.join(ds_folder+"datasets_temp", "log-columns_file-"+datasetName+".txt"), "w")
+        for element in manualFeatures:
+            textfile.write(element + "\n")
+        textfile.close()        
+        data = ""        
+        if manualFeatures:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-columns_file-"+datasetName+".txt")) as fp:
+                data = fp.read()
+        if os.path.exists(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt")):
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'a') as fp:
+                fp.write(data)
+        else:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'w') as fp:
+                fp.write(data)
+
+    
+    if dataset == 'log_test':
+        '''
+        if manualFeatures:
+            textfile = open(os.path.join(ds_folder+"datasets", "log-columns_file-"+datasetName+".txt"), "w")
+            for element in manualFeatures:
+                textfile.write(element + "\n")
+            textfile.close()    
+        data = ""
+        if manualFeatures:
+            with open(os.path.join(ds_folder+"datasets", "log-columns_file-"+datasetName+".txt")) as fp:
+                data = fp.read()        
+        if os.path.exists(os.path.join(ds_folder+"datasets", "log-joined_file.txt")):
+            with open(os.path.join(ds_folder+"datasets", "log-joined_file.txt"), 'a') as fp:
+                fp.write(data)
+        else:
+            with open(os.path.join(ds_folder+"datasets", "log-joined_file.txt"), 'w') as fp:
+                fp.write(data)
+    '''
+        columns = loadColumns(dataset)    
+        df = loadDataset(dataset)
+    
+    else:#se log uploaded   
+        #dataset = datasetName
+        columns = loadColumns_users(dataset)    
+        df = loadDataset_users(dataset)
+        '''
+        if manualFeatures:
+            textfile = open(os.path.join(ds_folder+"datasets_temp", "log-columns_file-"+datasetName+".txt"), "w")
+            for element in manualFeatures:
+                textfile.write(element + "\n")
+            textfile.close()        
+        data = ""        
+        if manualFeatures:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-columns_file-"+datasetName+".txt")) as fp:
+                data = fp.read()
+        if os.path.exists(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt")):
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'a') as fp:
+                fp.write(data)
+        else:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'w') as fp:
+                fp.write(data)
+        '''
+    #===============================================
+
+    filename = dataset + '_'
+        
+    listOfPos = list()
+    if mode_preprocessing == 'radio_keep':
+        if not manualFeatures:
+            df = df[columns]
+        else:
+            df = df[manualFeatures]        
+    elif mode_preprocessing == 'radio_delete':    
+        df = df.drop(manualFeatures, axis=1)
+
+    filename += str(datasetName) + '.csv'
+    #if dataset == 'log_test':
+    #    df.to_csv(os.path.join(ds_folder+"datasets", filename), index=False)        
+    #else:
+    df.to_csv(os.path.join('./datasets_temp/'+current_user.username, filename), index=False)
+    return redirect('/datasets/' + filename.split('.')[0])
+
+@app.route('/datasets/<dataset>/preprocessed_names_deleted/', methods=['POST'])
+@login_required
+def preprocessed_names_deleted(dataset):    
+    datasetName = request.form.get('newdataset')
+    mode_preprocessing = request.form.get('radio_preprocessing')
+    names_list = request.form.getlist('names_rows')    
+    
+    #====== create log/information about exclusions (or keep) =====
+    if names_list:
+        textfile = open(os.path.join(ds_folder+"datasets_temp", "log-rows_file-"+datasetName+".txt"), "w")
+        for element in names_list:
+            textfile.write(element + "\n")
+        textfile.close()
+        data = ""
+        if names_list:  
+            with open(os.path.join(ds_folder+"datasets_temp", "log-rows_file-"+datasetName+".txt")) as fp:
+                data = fp.read()        
+        if os.path.exists(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt")):
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'a') as fp:
+                fp.write(data)
+        else:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'w') as fp:
+                fp.write(data)
+        
+    if dataset == 'log_test':        
+        columns = loadColumns(dataset)    
+        df = loadDataset(dataset)
+    
+    else:#se log uploaded        
+        columns = loadColumns_users(dataset)
+        df = loadDataset_users(dataset)
+    #===============================================
+
+    filename = dataset + '_'
+        
+    #listOfPos = list()
+    if mode_preprocessing == 'radio_keep':
+        listOfPos = list()
+        if len(names_list) > 0:
+            df_rows = pd.DataFrame(columns=columns)     
+            #listOfPos = list()
+            resultDict = {}
+            
+            # Iterate over the list of elements one by one
+            for elem in names_list:        
+                # Check if the element exists in dataframe values
+                if elem in df.values:
+                    listOfPositions = getIndexes(df, elem, listOfPos)
+                    
+            for i in range(len(listOfPositions)):
+                if listOfPositions[i][0] in df.index:                
+                    df_rows = df_rows.append(df.iloc[listOfPositions[i][0]], ignore_index=True)
+            df = df_rows
+    elif mode_preprocessing == 'radio_delete':
+        listOfPos = list()  
+        if len(names_list) > 0:            
+            #listOfPos = list()                
+            resultDict = {}
+            # Iterate over the list of elements one by one
+            
+            for elem in names_list:        
+                if elem in df.values:
+                    listOfPositions = getIndexes(df, elem, listOfPos)
+                    
+            for i in range(len(listOfPositions)):
+                if listOfPositions[i][0] in df.index:
+                    df = df.drop(listOfPositions[i][0])
+                    #print('Position ', i, ' (Row index , Column Name) : ', listOfPositions[i])
+
+    filename += str(datasetName) + '.csv'    
+    df.to_csv(os.path.join('./datasets_temp/'+current_user.username, filename), index=False)
+    return redirect('/datasets/' + filename.split('.')[0])
+
+@app.route('/datasets/<dataset>/preprocessed_elements_deleted/', methods=['POST'])
+@login_required
+def preprocessed_elements_deleted(dataset):    
+    datasetName = request.form.get('newdataset')
+    mode_preprocessing = request.form.get('radio_preprocessing')
+    manualRows = request.form.getlist('manual_rows')
+    
+    #====== create log/information about exclusions (or keep) =====
+    if manualRows:
+        textfile = open(os.path.join(ds_folder+"datasets_temp", "log-rows_file-"+datasetName+".txt"), "w")
+        for element in manualRows:
+            textfile.write(element + "\n")
+        textfile.close()
+        data = ""
+        if manualRows:  
+            with open(os.path.join(ds_folder+"datasets_temp", "log-rows_file-"+datasetName+".txt")) as fp:
+                data = fp.read()        
+        if os.path.exists(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt")):
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'a') as fp:
+                fp.write(data)
+        else:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'w') as fp:
+                fp.write(data)
+        
+    if dataset == 'log_test':        
+        columns = loadColumns(dataset)    
+        df = loadDataset(dataset)
+    
+    else:#se log uploaded        
+        columns = loadColumns_users(dataset)
+        df = loadDataset_users(dataset)
+    #===============================================
+
+    filename = dataset + '_'
+        
+    #listOfPos = list()
+    if mode_preprocessing == 'radio_keep':
+        listOfPos = list()
+        if len(manualRows) > 0:
+            df_rows = pd.DataFrame(columns=columns)     
+            #listOfPos = list()
+            resultDict = {}            
+            # Iterate over the list of elements one by one
+            for elem in manualRows:        
+                # Check if the element exists in dataframe values
+                if elem in df.values:
+                    listOfPositions = getIndexes(df, elem, listOfPos)
+                    
+            for i in range(len(listOfPositions)):
+                if listOfPositions[i][0] in df.index:                
+                    df_rows = df_rows.append(df.iloc[listOfPositions[i][0]], ignore_index=True)
+            df = df_rows
+    elif mode_preprocessing == 'radio_delete':
+        listOfPos = list()  
+        if len(manualRows) > 0:            
+            #listOfPos = list()                
+            resultDict = {}
+            # Iterate over the list of elements one by one
+            
+            for elem in manualRows:        
+                if elem in df.values:
+                    listOfPositions = getIndexes(df, elem, listOfPos)
+                    
+            for i in range(len(listOfPositions)):
+                if listOfPositions[i][0] in df.index:
+                    df = df.drop(listOfPositions[i][0])
+                    #print('Position ', i, ' (Row index , Column Name) : ', listOfPositions[i])
+
+    filename += str(datasetName) + '.csv'
+    #if dataset == 'log_test':
+    #    df.to_csv(os.path.join(ds_folder+"datasets", filename), index=False)        
+    #else:
+    df.to_csv(os.path.join('./datasets_temp/'+current_user.username, filename), index=False)
+    return redirect('/datasets/' + filename.split('.')[0])
+
+@app.route('/datasets/<dataset>/preprocessed_anonymize/', methods=['POST'])
+@login_required
+def preprocessed_anonymize(dataset):    
+    datasetName = request.form.get('newdataset')    
+    anonymize_student = request.form.get('anonymize_names')
+    
+    if dataset == 'log_test':
+        columns = loadColumns(dataset)    
+        df = loadDataset(dataset)
+    else:
+        columns = loadColumns_users(dataset)    
+        df = loadDataset_users(dataset)
+
+    filename = dataset + '_'
+    
+    #===== Anonymize ==========================#    
+    if anonymize != '':
+        df_aux = pd.DataFrame(columns=columns)        
+        names = df[anonymize_student].unique()
+        df_aux = df
+        len_names = len(names)
+        n = 1        
+        for key in names:
+            df_aux[anonymize_student] = df[anonymize_student].replace([key],'Anonymous'+str(n))
+            n = n + 1
+        df = df_aux
+    #===========================================#
+    
+    filename += str(datasetName) + '.csv'    
+    df.to_csv(os.path.join('./datasets_temp/'+current_user.username, filename), index=False)
+    return redirect('/datasets/' + filename.split('.')[0])
+
+@app.route('/datasets/<dataset>/preprocessed_inverse_order/', methods=['POST'])
+@login_required
+def preprocessed_inverse_order(dataset):    
+    datasetName = request.form.get('newdataset')
+
+    if dataset == 'log_test':
+        columns = loadColumns(dataset)    
+        df = loadDataset(dataset)
+    else:
+        columns = loadColumns_users(dataset)    
+        df = loadDataset_users(dataset)
+
+    filename = dataset + '_'
+    
+    #==== update df reverse order - LMS-Moodle =====#
+    #if sort_log == 'radio_sort_yes':        
+    df_aux = pd.DataFrame(columns=columns)
+    df_aux = df.iloc[::-1]
+    df = df_aux
+    #================================================
+    
+    filename += str(datasetName) + '.csv'    
+    df.to_csv(os.path.join('./datasets_temp/'+current_user.username, filename), index=False)
+    return redirect('/datasets/' + filename.split('.')[0])
+
 @app.route('/datasets/<dataset>/preprocessed_dataset/', methods=['POST'])
+@login_required
 def preprocessed_dataset(dataset):    
     manualFeatures = request.form.getlist('manualfeatures')
     datasetName = request.form.get('newdataset')
@@ -475,32 +1022,95 @@ def preprocessed_dataset(dataset):
     anonymize_log = request.form.get('radio_anonymize')
     anonymize_student = request.form.get('anonymize_names')
 
-    columns = loadColumns(dataset)    
-    df = loadDataset(dataset)
+    if dataset == 'log_test':
+        if manualRows:
+            textfile = open(os.path.join(ds_folder+"datasets", "log-rows_file-"+datasetName+".txt"), "w")
+            for element in manualRows:
+                textfile.write(element + "\n")
+            textfile.close()
+        if manualFeatures:
+            textfile = open(os.path.join(ds_folder+"datasets", "log-columns_file-"+datasetName+".txt"), "w")
+            for element in manualFeatures:
+                textfile.write(element + "\n")
+            textfile.close()    
+        
+        data = data2 = ""
+        if manualRows:  
+            with open(os.path.join(ds_folder+"datasets", "log-rows_file-"+datasetName+".txt")) as fp:
+                data2 = fp.read()
+        if manualFeatures:
+            with open(os.path.join(ds_folder+"datasets", "log-columns_file-"+datasetName+".txt")) as fp:
+                data = fp.read()
+        data += "\n"
+        data += data2
+        if os.path.exists(os.path.join(ds_folder+"datasets", "log-joined_file.txt")):
+            with open(os.path.join(ds_folder+"datasets", "log-joined_file.txt"), 'a') as fp:
+                fp.write(data)
+        else:
+            with open(os.path.join(ds_folder+"datasets", "log-joined_file.txt"), 'w') as fp:
+                fp.write(data)
+
+        #i_date = request.form.get('start_date')
+        #f_date = request.form.get('end_date')
+
+        columns = loadColumns(dataset)    
+        df = loadDataset(dataset)
+    else:
+        if manualRows:
+            textfile = open(os.path.join(ds_folder+"datasets_temp", "log-rows_file-"+datasetName+".txt"), "w")
+            for element in manualRows:
+                textfile.write(element + "\n")
+            textfile.close()
+        if manualFeatures:
+            textfile = open(os.path.join(ds_folder+"datasets_temp", "log-columns_file-"+datasetName+".txt"), "w")
+            for element in manualFeatures:
+                textfile.write(element + "\n")
+            textfile.close()
+        
+        data = data2 = ""
+        if manualRows:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-rows_file-"+datasetName+".txt")) as fp:
+                data2 = fp.read()
+        if manualFeatures:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-columns_file-"+datasetName+".txt")) as fp:
+                data = fp.read()
+        data += "\n"
+        data += data2
+        if os.path.exists(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt")):
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'a') as fp:
+                fp.write(data)
+        else:
+            with open(os.path.join(ds_folder+"datasets_temp", "log-joined_file.txt"), 'w') as fp:
+                fp.write(data)
+
+        #i_date = request.form.get('start_date')
+        #f_date = request.form.get('end_date')
+
+        columns = loadColumns_users(dataset)
+        df = loadDataset_users(dataset)
+    #columns = loadColumns(dataset)
+    #df = loadDataset(dataset)
     filename = dataset + '_'
-    
-    #==== update df reverse order - LMS-Moodle =====#
-    if sort_log == 'radio_sort_yes':        
+
+    #==== update df correct order - LMS-Moodle =====#
+    if sort_log == 'radio_sort_yes':
         df_aux = pd.DataFrame(columns=columns)
         df_aux = df.iloc[::-1]
         df = df_aux
-        
-        '''
-        df_aux = pd.DataFrame(columns=columns)
-        len_df = len(df)
-        j = len_df - 1
-        for i in range(len_df):
-            df_aux = df_aux.append(df.iloc[j], ignore_index=True)
-            j = j - 1
-        df = df_aux
-        '''
+        #df_aux = pd.DataFrame(columns=columns)
+        #len_df = len(df)
+        #j = len_df - 1
+        #for i in range(len_df):
+        #    df_aux = df_aux.append(df.iloc[j], ignore_index=True)
+        #    j = j - 1
+        #df = df_aux
     #===============================================#
     if anonymize_log == 'radio_anonymize_yes':
-        df_aux = pd.DataFrame(columns=columns)        
+        df_aux = pd.DataFrame(columns=columns)
         names = df[anonymize_student].unique()
         df_aux = df
         len_names = len(names)
-        n = 1        
+        n = 1
         for key in names:
             df_aux[anonymize_student] = df[anonymize_student].replace([key],'Anonymous'+str(n))
             n = n + 1
@@ -546,8 +1156,28 @@ def preprocessed_dataset(dataset):
                     #print('Position ', i, ' (Row index , Column Name) : ', listOfPositions[i])
 
     filename += str(datasetName) + '.csv'
-    df.to_csv(os.path.join(ds_folder+"datasets", filename), index=False)
+    if dataset == 'log_test':
+        df.to_csv(os.path.join(ds_folder+"datasets", filename), index=False)
+    else:
+        df.to_csv(os.path.join('./datasets_temp/'+current_user.username, filename), index=False)
+    #df.to_csv(os.path.join(ds_folder+"datasets", filename), index=False)
     return redirect('/datasets/' + filename.split('.')[0])
+
+@app.route('/get_csv/<dataset>')
+@login_required
+def get_csv(dataset):
+    csv_dir  = "./datasets"
+    csv_file = dataset
+    csv_path = os.path.join(csv_dir, csv_file)
+    return send_file(csv_path, as_attachment=True, attachment_filename=csv_file)
+
+@app.route('/get_csv_user/<dataset>')
+@login_required
+def get_csv_user(dataset):
+    csv_dir  = "./datasets_temp/"+current_user.username
+    csv_file = dataset
+    csv_path = os.path.join(csv_dir, csv_file)
+    return send_file(csv_path, as_attachment=True, attachment_filename=csv_file)
 
 #=======================
 # No caching at all for API endpoints.
@@ -577,5 +1207,6 @@ def add_header(r):
 
 if __name__ == "__main__":
     #app.run(debug=TRUE)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True,host='0.0.0.0')
+    #port = int(os.environ.get("PORT", 5000))
+    #app.run(host='0.0.0.0', port=port)

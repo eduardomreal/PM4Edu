@@ -1,17 +1,69 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container" style="width: auto; border-radius: 6px;">
-  <form class="form-features" method="post" action='/datasets/{{dataset}}/preprocessed_dataset/'>
-    <h2 style="text-align: center; padding-top: 15px;"><b>Data Cleaning & Segmentation</b></h2>
-    <h4 class="form-features-heading" style="text-align: center;">Preprocessing options (select not required)</h4>
-    <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
-    
+  <h1 style="text-align: center;"><b>Data Preparation</b></h1>  
+  <h4 class="form-features-heading" style="text-align: center;">Preprocessing options (select not required)</h4>
+  <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+  <h3 style="text-align: center;"><b>Data preparation by steps (recommended)</b></h3>
+  </br>
+  <div class="row marketing">    
+    <div class="col-lg-4" style="text-align: center;">
+      <a href="/attributes_delete/{{dataset}}">
+      <img alt="Qries" src="{{url_for('static', filename='images/attributes.png')}}"
+      width="60" height="60">
+      </a>
+      <p><b>Attributes delete</b></p>
+      <p>(Step 1)</p>
+    </div>
+    <div class="col-lg-4" style="text-align: center;">
+      <a href="/preprocess_names_choice_attribute/{{dataset}}">
+        <img alt="Qries" src="{{url_for('static', filename='images/names.png')}}"
+        width="60" height="60">
+        </a>
+        <p><b>Name(s) delete</b></p>
+        <p>(Step 2)</p>
+    </div>
+    <div class="col-lg-4" style="text-align: center;">
+      <a href="/elements_delete/{{dataset}}">
+        <img alt="Qries" src="{{url_for('static', filename='images/elements.png')}}"
+        width="60" height="60">
+        </a>
+        <p><b>Element(s) delete</b></p>
+        <p>(Step 3)</p>
+    </div>    
+  </div>
+  </br>
+  </br>
+  <h3 style="text-align: center;"><b>Data preparation (others)</b></h3>
+  </br>
+  <div class="row marketing">        
+    <div class="col-lg-3" style="text-align: center;"></div>
+    <div class="col-lg-3" style="text-align: center;">
+      <a href="/anonymize/{{dataset}}">
+        <img alt="Qries" src="{{url_for('static', filename='images/anonymize.png')}}"
+        width="60" height="60">
+        </a>
+        <p><b>Anonymize</b></p>
+    </div>
+    <div class="col-lg-3" style="text-align: center;">
+      <a href="/inverse_order/{{dataset}}">
+        <img alt="Qries" src="{{url_for('static', filename='images/inverse-order.png')}}"
+        width="60" height="60">
+        </a>
+        <p><b>Inverse order</b></p>
+    </div>
+    <div class="col-lg-3" style="text-align: center;"></div>       
+  </div>
+
+  </br>
+  <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">  
+  <h3 style="text-align: center;"><b>Data preparation (all options)</b></h3>
+  </br>
+  <form class="form-features" method="post" action='/datasets/{{dataset}}/preprocessed_dataset/'>  
     <div class="col" style="display: flex; justify-content: center; align-items: center;">      
       <h4 style="text-align: center;"><b>New event log name: (extension of  {{dataset}}_):&nbsp;</b></h4>
       <input type="text" name="newdataset"><br>
-    </div>
-    <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
-    <h3 style="text-align: center;">Data preparation</h3>
+    </div>    
     <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
 
     <div class="row marketing">
@@ -62,61 +114,68 @@
     </div>
 
     
-      <div class="row">        
-        
-        <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
-        <h4 style="text-align: center;"><b>Attribute(s) selection (keep/delete columns!):</b></h4>
-        <div class="col" style="display: flex; justify-content: center; align-items: center;">
-          <select multiple name="manualfeatures">
-            {% for col in columns %}
-            <option value="{{col}}">{{col}}</option>       
-            {% endfor %}
-          </select>
-        </div>      
-        <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
-        <h4 style="text-align: center;"><b>Value(s) attribute(s) selection (keep/delete rows!):</b></h4>
-        <h5 style="text-align: center;">It will delete all rows where each value is!</h5>
-        <br>
-        
-        
-        <div class="col">
+    <div class="row">        
+      
+      <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+      <h4 style="text-align: center;"><b>Attribute(s) selection (keep/delete columns!):</b></h4>
+      <div class="col" style="display: flex; justify-content: center; align-items: center;">
+        <select multiple name="manualfeatures">
           {% for col in columns %}
-            <h4 style="text-align: center;">{{col}}</h4>
-            
-            {% set data = [] %}
-            {% for i, j in df_prep[col].items() %}
+          <option value="{{col}}">{{col}}</option>       
+          {% endfor %}
+        </select>
+      </div>      
+      <hr style="height: 2px; border:none; color:#DCDCDC; background-color:#DCDCDC;">
+      <h4 style="text-align: center;"><b>Value(s) attribute(s) selection (keep/delete rows!):</b></h4>
+      <h5 style="text-align: center;">It will delete all rows where each value is!</h5>
+      <br>
+      
+      
+      <div class="col">
+        {% for col in columns%}        
+          <h4 style="text-align: center;">{{col}}</h4>
+          
+          {% set data = [] %}
+          {% for i, j in df_prep[col].items() %}            
+            {% if j != '' and j != '-' %}
               <p style="display: none;">{{data.append(j)}}</p>
               {% set aux = j %}
-            {% endfor %}            
-            
-            {% set slots = [] %}
-            {% for slot in data if slot not in slots %}
-            <p style="display: none;">{{slots.append(slot)}}</p>
-            {% endfor %}
-            
-            {% if slots|length > 10 %}
-              <div class="col" style="display: flex; justify-content: center; align-items: center;">
-                <select multiple name="manual_rows" id="elements" size="10">
-                  {% for el_name in slots %}                
-                    <option value="{{el_name}}">{{el_name}}</option>
-                  {% endfor %}
-                </select>
-              </div>              
-            {% else %}
-              <div class="col" style="display: flex; justify-content: center; align-items: center;">
-                <select multiple name="manual_rows" id="elements" size="{{slots|length}}">
-                  {% for el_name in slots %}                
-                    <option value="{{el_name}}">{{el_name}}</option>
-                  {% endfor %}
-                </select>
-              </div>
             {% endif %}
-            
-            <br>            
           {% endfor %}
-        </div>      
+          
+          {% set slots = [] %}
+          {% for slot in data if slot not in slots %}
+	          <p style="display: none;">{{slots.append(slot)}}</p>
+          {% endfor %}
+          
+          {% if slots|length > 10 %}
+            <div class="col" style="display: flex; justify-content: center; align-items: center;">
+              <select multiple name="manual_rows" id="elements" size="10">
+                {% for el_name in slots %}                
+                  <option value="{{el_name}}">{{el_name}}</option>
+                {% endfor %}
+              </select>
+            </div>              
+          {% else %}
+            <div class="col" style="display: flex; justify-content: center; align-items: center;">
+              <select multiple name="manual_rows" id="elements" size="{{slots|length}}">
+                {% for el_name in slots %}                
+                  <option value="{{el_name}}">{{el_name}}</option>
+                {% endfor %}
+              </select>
+            </div>
+          {% endif %}          
+          <br>            
+        {% endfor %}
       </div>
-      <button class="btn btn-lg btn-primary btn-block" type="submit">Create New Dataset</button>
-  </form> 
+      <div class="col">
+        <label for="initial_date">Initial date:</label>
+        <input type="date" id="initial_date" name="start_date">
+        <label for="final_date">Final date:</label>
+        <input type="date" id="final_date" name="end_date">
+      </div>
+    </div>
+    <button class="btn btn-lg btn-primary btn-block" type="submit">Create New Dataset</button>
+  </form>
 </div>
 {% endblock %}
