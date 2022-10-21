@@ -11,13 +11,22 @@ PM4Edu is a Process Mining for Educactino tool.
 Debian/Ubuntu;
 
 You can create a venv:
+
 python3 -m venv venv
+
 source venv/bin/activate
+
 pip install --upgrade
+
 pip pip install -r requirements.txt
+
 apt-get install graphviz (maybe it's required)
 
+
 Optional:
+
 export FLASK\_APP=app.py
+
 export FLASK\_DEBUG=1
+
 export FLASK\_ENV=development
