@@ -10,24 +10,32 @@ PM4Edu is a Process Mining for Educactino tool.
 
 Ubuntu (20.4) & Python 3.8.10;
 
+
 If you need change python version:
+
 sudo apt install python3.8
+
 sudo ln -sf /usr/bin/python3.8 /usr/bin/python3
 
 and (just in case):
+
 rm -rf venv
+
 apt install python3.8-venv
+
 python3.8 -m venv venv
 
 So...
+
 You can create a venv:
+
 python3 -m venv venv
 
 source venv/bin/activate
 
 pip install --upgrade
 
-pip pip install -r requirements.txt
+pip install -r requirements.txt
 
 apt-get install graphviz (required)
 
